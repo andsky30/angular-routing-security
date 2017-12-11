@@ -18,11 +18,17 @@ angular.module('app', ['ngRoute', 'ngResource'])
                 controller: 'NewController',
                 controllerAs: 'newCtrl'
             })
+            .when('/login', {
+                templateUrl: 'partials/login.html',
+                controller: 'AuthenticationController',
+                controllerAs: 'authController'
+            })
             .otherwise({
                 redirectTo: '/list'
             });
     })
     .constant('BOOK_ENDPOINT', '/api/books/:id')
+    .constant('LOGIN_ENDPOINT', '/login')
     .factory('Book', function($resource, BOOK_ENDPOINT) {
         return $resource(BOOK_ENDPOINT);
     })
@@ -35,6 +41,20 @@ angular.module('app', ['ngRoute', 'ngResource'])
         }
         this.add = function(book) {
             book.$save();
+        }
+    })
+    .service('AuthenticationService', function($http, LOGIN_ENDPOINT) {
+        this.authenticate = function(credentials, successCallback) {
+            var authHeader = {Authorization: 'Basic ' + btoa(credentials.username+':'+credentials.password)};
+            var config = {headers: authHeader};
+            $http
+                .post(LOGIN_ENDPOINT, {}, config)
+                .then(function success(value) {
+                    successCallback();
+                }, function error(reason) {
+                    console.log('Login error');
+                    console.log(reason);
+                });
         }
     })
     .controller('ListController', function(Books) {
@@ -52,5 +72,43 @@ angular.module('app', ['ngRoute', 'ngResource'])
         vm.saveBook = function() {
             Books.add(vm.book);
             vm.book = new Book();
+        }
+    })
+    .controller('AuthenticationController', function($rootScope, $location, AuthenticationService) {
+        var vm = this;
+        vm.credentials = {};
+        var loginSuccess = function() {
+            $rootScope.authenticated = true;
+            $location.path('/new');
+        }
+        vm.login = function() {
+            AuthenticationService.authenticate(vm.credentials, loginSuccess);
+        }
+        var logoutSuccess = function() {
+            $rootScope.authenticated = false;
+            $location.path('/');
+        }
+        vm.logout = function() {
+            AuthenticationService.logout(logoutSuccess);
+        }
+    })
+    .constant('LOGOUT_ENDPOINT', '/logout')
+    .service('AuthenticationService', function($http, LOGIN_ENDPOINT) {
+        this.authenticate = function(credentials, successCallback) {
+            var authHeader = {Authorization: 'Basic ' + btoa(credentials.username+':'+credentials.password)};
+            var config = {headers: authHeader};
+            $http
+                .post(LOGIN_ENDPOINT, {}, config)
+                .then(function success(value) {
+                    $http.defaults.headers.post.Authorization = authHeader.Authorization;
+                    successCallback();
+                }, function error(reason) {
+                    console.log('Login error');
+                    console.log(reason);
+                });
+        }
+        this.logout = function(successCallback) {
+            delete $http.defaults.headers.post.Authorization;
+            successCallback();
         }
     });
