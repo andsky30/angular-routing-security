@@ -43,6 +43,7 @@ angular.module('app', ['ngRoute', 'ngResource'])
             book.$save();
         }
     })
+    .constant('LOGOUT_ENDPOINT', '/logout')
     .service('AuthenticationService', function($http, LOGIN_ENDPOINT) {
         this.authenticate = function(credentials, successCallback) {
             var authHeader = {Authorization: 'Basic ' + btoa(credentials.username+':'+credentials.password)};
@@ -50,11 +51,16 @@ angular.module('app', ['ngRoute', 'ngResource'])
             $http
                 .post(LOGIN_ENDPOINT, {}, config)
                 .then(function success(value) {
+                    $http.defaults.headers.post.Authorization = authHeader.Authorization;
                     successCallback();
                 }, function error(reason) {
                     console.log('Login error');
                     console.log(reason);
                 });
+        }
+        this.logout = function(successCallback) {
+            delete $http.defaults.headers.post.Authorization;
+            successCallback();
         }
     })
     .controller('ListController', function(Books) {
@@ -92,23 +98,4 @@ angular.module('app', ['ngRoute', 'ngResource'])
             AuthenticationService.logout(logoutSuccess);
         }
     })
-    .constant('LOGOUT_ENDPOINT', '/logout')
-    .service('AuthenticationService', function($http, LOGIN_ENDPOINT) {
-        this.authenticate = function(credentials, successCallback) {
-            var authHeader = {Authorization: 'Basic ' + btoa(credentials.username+':'+credentials.password)};
-            var config = {headers: authHeader};
-            $http
-                .post(LOGIN_ENDPOINT, {}, config)
-                .then(function success(value) {
-                    $http.defaults.headers.post.Authorization = authHeader.Authorization;
-                    successCallback();
-                }, function error(reason) {
-                    console.log('Login error');
-                    console.log(reason);
-                });
-        }
-        this.logout = function(successCallback) {
-            delete $http.defaults.headers.post.Authorization;
-            successCallback();
-        }
-    });
+    ;
